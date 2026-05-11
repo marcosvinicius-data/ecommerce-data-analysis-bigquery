@@ -84,6 +84,10 @@ FROM `data-to-insights.ecommerce.all_sessions`;
 
 ![Product Performance](imagens/product-performance-analysis.png)
 
+### Análise de abandono de carrinho
+
+![Abandoned Cart Analysis](imagens/abandoned-cart-analysis.png)
+
 ## Principais Insights
 
 - Nem os produtos mais visualizados apresentaram maior quantidade de pedidos.
