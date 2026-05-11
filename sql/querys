@@ -1,0 +1,400 @@
+-- Identifica registros duplicados no dataset de ecommerce
+-- A consulta agrupa todas as colunas da tabela e retorna apenas
+-- os registros que aparecem mais de uma vez.
+
+#standardSQL
+
+SELECT
+  COUNT(*) AS num_duplicate_rows,
+  *
+
+FROM `data-to-insights.ecommerce.all_sessions_raw`
+
+GROUP BY
+  fullVisitorId,
+  channelGrouping,
+  time,
+  country,
+  city,
+  totalTransactionRevenue,
+  transactions,
+  timeOnSite,
+  pageviews,
+  sessionQualityDim,
+  date,
+  visitId,
+  type,
+  productRefundAmount,
+  productQuantity,
+  productPrice,
+  productRevenue,
+  productSKU,
+  v2ProductName,
+  v2ProductCategory,
+  productVariant,
+  currencyCode,
+  itemQuantity,
+  itemRevenue,
+  transactionRevenue,
+  transactionId,
+  pageTitle,
+  searchKeyword,
+  pagePathLevel1,
+  eCommerceAction_type,
+  eCommerceAction_step,
+  eCommerceAction_option
+
+HAVING num_duplicate_rows > 1;
+
+
+-- Verifica possíveis registros duplicados na tabela all_sessions
+-- utilizando os principais campos identificadores do schema.
+-- A consulta retorna apenas registros com contagem maior que 1.
+
+#standardSQL
+
+SELECT
+  fullVisitorId,          -- identificador único do visitante
+  visitId,                -- identificador da visita
+  date,                   -- data da sessão
+  time,                   -- horário da interação
+  v2ProductName,          -- nome do produto
+  productSKU,             -- identificador único do produto
+  type,                   -- tipo de interação
+  eCommerceAction_type,   -- ação realizada no ecommerce
+  eCommerceAction_step,
+  eCommerceAction_option,
+  transactionRevenue,     -- receita da transação
+  transactionId,          -- identificador da transação
+
+  COUNT(*) AS row_count
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+GROUP BY
+  1,2,3,4,5,6,7,8,9,10,11,12
+
+HAVING row_count > 1;
+
+
+
+-- Calcula o total de visualizações de produtos e
+-- a quantidade de visitantes únicos no dataset de ecommerce.
+
+#standardSQL
+
+SELECT
+  COUNT(*) AS product_views,
+  COUNT(DISTINCT fullVisitorId) AS unique_visitors
+
+FROM `data-to-insights.ecommerce.all_sessions`;
+
+
+
+
+
+-- Exibe a quantidade de visitantes únicos por canal de aquisição.
+-- A consulta agrupa os acessos de acordo com a origem do tráfego.
+
+#standardSQL
+
+SELECT
+  COUNT(DISTINCT fullVisitorId) AS unique_visitors,
+  channelGrouping
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+GROUP BY channelGrouping
+
+ORDER BY channelGrouping DESC;
+
+
+
+
+
+-- Lista os nomes únicos dos produtos disponíveis no dataset
+-- em ordem alfabética.
+
+#standardSQL
+
+SELECT
+  v2ProductName AS ProductName
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+GROUP BY ProductName
+
+ORDER BY ProductName;
+
+
+
+
+-- Retorna os 5 produtos mais visualizados pelos usuários.
+-- A consulta considera apenas visualizações de páginas de produtos.
+
+#standardSQL
+
+SELECT
+  COUNT(*) AS product_views,
+  v2ProductName AS ProductName
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+WHERE type = 'PAGE'
+
+GROUP BY v2ProductName
+
+ORDER BY product_views DESC
+
+LIMIT 5;
+
+
+
+
+
+-- Identifica os 5 produtos mais visualizados por visitantes únicos.
+-- A consulta evita contagens duplicadas do mesmo usuário visualizando
+-- o mesmo produto várias vezes.
+
+WITH unique_product_views_by_person AS (
+
+  -- Seleciona visualizações únicas de produtos por visitante
+  SELECT
+    fullVisitorId,
+    v2ProductName AS ProductName
+
+  FROM `data-to-insights.ecommerce.all_sessions`
+
+  WHERE type = 'PAGE'
+
+  GROUP BY
+    fullVisitorId,
+    v2ProductName
+)
+
+-- Conta o total de visitantes únicos por produto
+SELECT
+  COUNT(*) AS unique_view_count,
+  ProductName
+
+FROM unique_product_views_by_person
+
+GROUP BY ProductName
+
+ORDER BY unique_view_count DESC
+
+LIMIT 5;
+
+
+
+
+
+-- Exibe os 5 produtos com maior número de visualizações,
+-- quantidade de pedidos realizados e total de itens vendidos.
+
+#standardSQL
+
+SELECT
+  COUNT(*) AS product_views,
+  COUNT(productQuantity) AS orders,
+  SUM(productQuantity) AS quantity_product_ordered,
+  v2ProductName
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+WHERE type = 'PAGE'
+
+GROUP BY v2ProductName
+
+ORDER BY product_views DESC
+
+LIMIT 5;
+
+
+
+
+-- Calcula os 5 produtos mais visualizados e apresenta
+-- métricas de pedidos, quantidade vendida e média de itens por pedido.
+
+#standardSQL
+
+SELECT
+  COUNT(*) AS product_views,
+  COUNT(productQuantity) AS orders,
+  SUM(productQuantity) AS quantity_product_ordered,
+
+  -- Média de itens vendidos por pedido
+  SUM(productQuantity) / COUNT(productQuantity) AS avg_per_order,
+
+  v2ProductName AS ProductName
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+WHERE type = 'PAGE'
+
+GROUP BY v2ProductName
+
+ORDER BY product_views DESC
+
+LIMIT 5;
+
+
+
+
+
+-- Consulta inicial para análise de taxa de conversão de produtos.
+-- O objetivo é identificar produtos com grande volume de pedidos
+-- e calcular seu potencial de conversão.
+
+#standardSQL
+
+SELECT
+  COUNT(*) AS product_views,
+  COUNT(productQuantity) AS potential_orders,
+  SUM(productQuantity) AS quantity_product_added,
+  v2ProductName
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+-- Exclui produtos relacionados a frisbee
+WHERE v2ProductName NOT LIKE 'frisbee'
+
+GROUP BY v2ProductName
+
+-- Filtra produtos com maior volume de itens adicionados
+HAVING quantity_product_added >
+
+ORDER BY conversion_rate
+
+LIMIT 10;
+
+
+
+
+
+-- Calcula a taxa de conversão dos produtos com maior volume de pedidos.
+-- A consulta exclui produtos relacionados a frisbee e identifica
+-- os itens com melhor desempenho de conversão.
+
+#standardSQL
+
+SELECT
+  COUNT(*) AS product_views,
+  COUNT(productQuantity) AS potential_orders,
+  SUM(productQuantity) AS quantity_product_added,
+
+  -- Taxa de conversão baseada em pedidos e visualizações
+  (COUNT(productQuantity) / COUNT(*)) AS conversion_rate,
+
+  v2ProductName
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+-- Remove produtos contendo "frisbee"
+WHERE LOWER(v2ProductName) NOT LIKE '%frisbee%'
+
+GROUP BY v2ProductName
+
+-- Filtra produtos com mais de 1000 unidades adicionadas
+HAVING quantity_product_added > 1000
+
+ORDER BY conversion_rate DESC
+
+LIMIT 10;
+
+
+
+
+
+-- Exibe a quantidade de visitantes únicos por tipo de ação
+-- realizada no processo de ecommerce.
+
+#standardSQL
+
+SELECT
+  COUNT(DISTINCT fullVisitorId) AS number_of_unique_visitors,
+  eCommerceAction_type
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+GROUP BY eCommerceAction_type
+
+ORDER BY eCommerceAction_type;
+
+
+
+
+
+-- Relaciona os tipos de ações realizadas no ecommerce
+-- com descrições textuais utilizando CASE.
+-- A consulta também calcula a quantidade de visitantes únicos
+-- para cada etapa da jornada de compra.
+
+#standardSQL
+
+SELECT
+  COUNT(DISTINCT fullVisitorId) AS number_of_unique_visitors,
+  eCommerceAction_type,
+
+  CASE eCommerceAction_type
+    WHEN '0' THEN 'Unknown'
+    WHEN '1' THEN 'Click through of product lists'
+    WHEN '2' THEN 'Product detail views'
+    WHEN '3' THEN 'Add product(s) to cart'
+    WHEN '4' THEN 'Remove product(s) from cart'
+    WHEN '5' THEN 'Check out'
+    WHEN '6' THEN 'Completed purchase'
+    WHEN '7' THEN 'Refund of purchase'
+    WHEN '8' THEN 'Checkout options'
+    ELSE 'ERROR'
+  END AS eCommerceAction_type_label
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+GROUP BY eCommerceAction_type
+
+ORDER BY eCommerceAction_type;
+
+
+
+
+
+
+-- Identifica sessões de alta qualidade que abandonaram o carrinho.
+-- A consulta localiza visitantes que adicionaram produtos ao carrinho,
+-- mas não concluíram a compra.
+
+#standardSQL
+
+SELECT
+
+  -- Cria um identificador único para cada sessão
+  CONCAT(fullVisitorId, CAST(visitId AS STRING)) AS unique_session_id,
+
+  sessionQualityDim,
+
+  -- Soma da receita gerada na sessão
+  SUM(productRevenue) AS transaction_revenue,
+
+  -- Última etapa atingida no processo de checkout
+  MAX(eCommerceAction_type) AS checkout_progress
+
+FROM `data-to-insights.ecommerce.all_sessions`
+
+-- Filtra sessões consideradas de alta qualidade
+WHERE sessionQualityDim > 60
+
+GROUP BY
+  unique_session_id,
+  sessionQualityDim
+
+HAVING
+
+  -- Sessão chegou até adicionar ao carrinho
+  checkout_progress = '3'
+
+  -- Mas não gerou receita/conversão
+  AND (
+    transaction_revenue = 0
+    OR transaction_revenue IS NULL
+  );

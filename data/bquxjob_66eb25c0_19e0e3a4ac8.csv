@@ -1,0 +1,8 @@
+number_of_unique_visitors,eCommerceAction_type,eCommerceAction_type_label
+389240,0,Unknown
+122728,1,Click through of product lists
+122477,2,Product detail views
+56010,3,Add product(s) to cart
+12015,4,Remove product(s) from cart
+30408,5,Check out
+19988,6,Completed purchase
