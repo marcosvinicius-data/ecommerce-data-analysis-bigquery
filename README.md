@@ -74,6 +74,12 @@ SELECT
 FROM `data-to-insights.ecommerce.all_sessions`;
 ```
 
+## Imagens do Projeto
+
+### Identificação de registros duplicados
+
+![Duplicate Records Query](imagens/duplicate-records-query.png)
+
 ## Principais Insights
 
 - Nem os produtos mais visualizados apresentaram maior quantidade de pedidos.
