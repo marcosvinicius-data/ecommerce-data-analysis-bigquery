@@ -80,6 +80,10 @@ FROM `data-to-insights.ecommerce.all_sessions`;
 
 ![Duplicate Records Query](imagens/duplicate-records-query.png)
 
+### Análise de desempenho dos produtos
+
+![Product Performance](imagens/product-performance-analysis.png)
+
 ## Principais Insights
 
 - Nem os produtos mais visualizados apresentaram maior quantidade de pedidos.
